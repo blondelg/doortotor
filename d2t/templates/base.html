@@ -1,1 +1,16 @@
-toto
+<!doctype html>
+<head>
+    <title>d2t - {{ ctx.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {{ ctx.head | safe }}
+</head>
+
+<form method="post">
+    <label for="URL">Url</label>
+    <input name="url" id="url" required>
+    <input type="submit" value="Rechercher">
+</form>
+
+{{ ctx.body | safe }}
+
+
