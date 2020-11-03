@@ -12,17 +12,16 @@ from flask import (
 
 bp = Blueprint('view', __name__, url_prefix='')
 
-@bp.route('/search', methods=('GET', 'POST'))
+@bp.route('/search/', methods=('GET', 'POST'))
 def search():
     ctx = {}
-    print("DEBUG : ", request.method)
     if request.method == 'POST':
         url = request.form['url']
         ctx = {}
         
         # create TorElements object
-        tor = TorElements(url)
-
+        tor = TorElements(url, session)
+        print("DBEUG : ", session['url'])
         # get child page title
         ctx['title'] = tor.get_title()
 
@@ -34,23 +33,29 @@ def search():
 
     return render_template('base.html', ctx=ctx)
 
-@bp.route('/clickon/', mehtods=('GET'))
+
+@bp.route('/clickon', methods=('GET', 'POST'))
 def clickon():
-    pass
+    ctx = {}
+    urlid = request.args.get('urlid')
+    # get 
+
+
+    return render_template('base.html', ctx=ctx)
+
 
 class TorElements():
     
     """ Submit request over Tor network, parse response to fit into browser """
     
-    def __init__(self, url):
+    def __init__(self, url, session):
         
-        self.url = urlparse(url)
-
+        session['page_url'] = self.url = urlparse(url)
         self.response = self.get_response()
 
         self.html = self.response.text
         self.soup = self.get_soup()
-        self.set_abs_href()
+        self.set_abs_href(session)
         self.body = self.get_body()
         
         self.title = self.get_title()
@@ -84,13 +89,26 @@ class TorElements():
         """ build the beautiful soup object """
         return BeautifulSoup(self.html, 'html.parser')
 
-    def set_abs_href(self):
+    def set_abs_href(self, session):
         """ replace relatives hrefs to absolute ones """
+        url_count = 1
+        page_refs = {}
         for tag in self.soup.find_all():
             if tag.has_attr('href'):
-                tag['href'] = self.url.scheme + "://" + self.url.netloc + tag['href']
+                print('DEBUG : ', urlparse(tag['href']))
+                print('DEBUG : ', tag['href'])
+            if tag.has_attr('href') and tag.name == 'a':
+                page_refs[url_count] = tag['href']
+                tag['href'] = f'/clickon?urlid={url_count}'
+                url_count += 1
 
+            elif tag.has_attr('href') and tag.name == 'link':
+                tag['href'] = session['page_url'].scheme + "://" + session['page_url'].netloc + tag['href']
 
+            elif tag.has_attr('src'):
+                tag['src'] = session['page_url'].scheme + "://" + session['page_url'].netloc + tag['src']
+
+        session['page_refs'] = page_refs
 
 
 
