@@ -12,44 +12,42 @@ from flask import (
 
 bp = Blueprint('view', __name__, url_prefix='')
 
-@bp.route('/search/', methods=('GET', 'POST'))
+@bp.route('/', methods=('GET', 'POST'))
 def search():
     ctx = {}
     if request.method == 'POST':
         url = request.form['url']
-        ctx = {}
-        
-        # create TorElements object
-        tor = TorElements(url, session)
-        print("DBEUG : ", session['url'])
-        # get child page title
-        ctx['title'] = tor.get_title()
 
-        # get child page head
-        ctx['head'] = tor.get_head()
+    if request.method == 'GET':
+        urlid = request.args.get('urlid')
+        if urlid:
+            page_refs = g.pop('page_refs', None)
+            print("DEBUG :", page_refs)
+            url = page_refs[urlid]
+        else:
+            return render_template('base.html', ctx=ctx)
 
-        # get body
-        ctx['body'] = tor.get_body()
+    # create TorElements object
+    tor = TorElements(url, session)
 
-    return render_template('base.html', ctx=ctx)
+    # get child page title
+    ctx['title'] = tor.get_title()
 
+    # get child page head
+    ctx['head'] = tor.get_head()
 
-@bp.route('/clickon', methods=('GET', 'POST'))
-def clickon():
-    ctx = {}
-    urlid = request.args.get('urlid')
-    # get 
-
+    # get body
+    ctx['body'] = tor.get_body()
 
     return render_template('base.html', ctx=ctx)
 
 
 class TorElements():
-    
+
     """ Submit request over Tor network, parse response to fit into browser """
-    
+
     def __init__(self, url, session):
-        
+
         session['page_url'] = self.url = urlparse(url)
         self.response = self.get_response()
 
@@ -57,7 +55,7 @@ class TorElements():
         self.soup = self.get_soup()
         self.set_abs_href(session)
         self.body = self.get_body()
-        
+
         self.title = self.get_title()
 
     def get_response(self):
@@ -80,7 +78,7 @@ class TorElements():
         """ from soup retunrs head content """
         return '\n    '.join([str(e) for e in self.soup.head.findChildren() if
             e.name != 'title'])
-    
+
     def get_body(self):
         """ get body tag from child page """
         return self.soup.body
@@ -94,22 +92,36 @@ class TorElements():
         url_count = 1
         page_refs = {}
         for tag in self.soup.find_all():
+
             if tag.has_attr('href'):
-                print('DEBUG : ', urlparse(tag['href']))
-                print('DEBUG : ', tag['href'])
+                temp_url = urlparse(tag['href'])
+                temp_url = self.normalize_url(temp_url, session)
+
+            if tag.has_attr('src'):
+                temp_url = urlparse(tag['src'])
+                temp_url = self.normalize_url(temp_url, session)
+
             if tag.has_attr('href') and tag.name == 'a':
-                page_refs[url_count] = tag['href']
-                tag['href'] = f'/clickon?urlid={url_count}'
+                page_refs[url_count] = temp_url.geturl()
+                tag['href'] = f'/?urlid={url_count}'
                 url_count += 1
 
             elif tag.has_attr('href') and tag.name == 'link':
-                tag['href'] = session['page_url'].scheme + "://" + session['page_url'].netloc + tag['href']
+                tag['href'] = temp_url.geturl()
 
             elif tag.has_attr('src'):
-                tag['src'] = session['page_url'].scheme + "://" + session['page_url'].netloc + tag['src']
+                tag['src'] = temp_url.geturl()
 
-        session['page_refs'] = page_refs
-
-
+        g.page_refs = page_refs
 
 
+    def normalize_url(self, url, session):
+        """ from a given urlparse object, make sure scheme and netloc are correct """
+
+        if not url.scheme:
+            url = url._replace(scheme=session['page_url'].scheme)
+
+        if not url.netloc:
+            url = url._replace(netloc=session['page_url'].netloc)
+
+        return url
