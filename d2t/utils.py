@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+from urllib.parse import urlencode
 from fake_useragent import UserAgent
 import hashlib
 
@@ -15,13 +16,19 @@ class TorElements():
         pass
 
 
-    def get_response(self, url='', urlid=None):
+    def get_response(self, url='', urlid=None, path=None):
 
         if url:
             self.url = urlparse(url)
         elif urlid:
-            print(type(urlid), urlid)
             self.url = self.page_refs[urlid]
+        elif path:
+            print("DEBUG : ", path)
+            self.url = path
+            self.url = self.url._replace(scheme=self.url.scheme)
+            self.url = self.url._replace(netloc=self.url.netloc)
+            print("DEBUG : ", self.url)
+
         else:
             self.body = ''
             self.title = 'Accueil'
