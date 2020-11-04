@@ -76,8 +76,9 @@ class TorElements():
                 temp_url = self.normalize_url(temp_url)
 
             if tag.has_attr('href') and tag.name == 'a':
-                self.page_refs[str(url_count)] = temp_url
-                tag['href'] = f'/?urlid={url_count}'
+                url_hash = self.get_md5(temp_url.geturl())
+                self.page_refs[url_hash] = temp_url
+                tag['href'] = f'/?urlid={url_hash}'
                 url_count += 1
 
             elif tag.has_attr('href') and tag.name == 'link':
@@ -101,3 +102,6 @@ class TorElements():
 
     def get_md5(self, string):
         """ from a given string, returns md5 hash """
+        hash = hashlib.new("md5")
+        hash.update(string.encode())
+        return hash.hexdigest()
