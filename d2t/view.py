@@ -27,6 +27,7 @@ def search():
         urlid = request.args.get('urlid')
 
     # get response from url or urlid
+    #tor.flush()
     tor.get_response(url, urlid)
 
     # get child page title

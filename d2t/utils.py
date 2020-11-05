@@ -12,22 +12,23 @@ class TorElements():
     """ Submit request over Tor network, parse response to fit into browser """
 
     def __init__(self):
-
-        pass
+        self.page_refs = {}
 
 
     def get_response(self, url='', urlid=None, path=None):
 
+        print("DEBUG DICT SIZE : ", len(self.page_refs))
+
         if url:
             self.url = urlparse(url)
+
         elif urlid:
             self.url = self.page_refs[urlid]
+
         elif path:
-            print("DEBUG : ", path)
             self.url = path
             self.url = self.url._replace(scheme=self.url.scheme)
             self.url = self.url._replace(netloc=self.url.netloc)
-            print("DEBUG : ", self.url)
 
         else:
             self.body = ''
@@ -42,6 +43,7 @@ class TorElements():
         }
 
         response = requests.get(self.url.geturl(), proxies=proxies, headers=headers)
+        print("DEBUG COOKIE : ", response.cookies)
 
         self.html = response.text
         self.soup = self.get_soup()
@@ -71,7 +73,6 @@ class TorElements():
     def set_abs_href(self):
         """ replace relatives hrefs to absolute ones """
         url_count = 1
-        self.page_refs = {}
         for tag in self.soup.find_all():
 
             if tag.has_attr('href'):
@@ -112,3 +113,7 @@ class TorElements():
         hash = hashlib.new("md5")
         hash.update(string.encode())
         return hash.hexdigest()
+
+    def flush(self):
+        """ on a url request, flush existing urls dict """
+        self.page_refs = {}
